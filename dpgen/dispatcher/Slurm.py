@@ -44,7 +44,7 @@ class Slurm(Batch):
         stdin, stdout, stderr = self.context.block_checkcall(
             'cd %s && %s %s' % (self.context.remote_root, 'sbatch', self.sub_script_name))
         subret = (stdout.readlines())
-        job_id = subret[0].split()[-1]
+        job_id = subret[0].split()[3]
         self.context.write_file(self.job_id_name, job_id)
 
     def default_resources(self, res_):
@@ -164,11 +164,12 @@ class Slurm(Batch):
             return ""
 
     def _check_status_inner(self, job_id, retry=0):
+        print('checking status...')
         ret, stdin, stdout, stderr\
-            = self.context.block_call('squeue -o "%.18i %.2t" -j ' + job_id)
+            = self.context.block_call('squeue -o "%.18i %.2t" -M all -j ' + job_id + '| grep ' + job_id)
         if (ret != 0):
             err_str = stderr.read().decode('utf-8')
-            if str("Invalid job id specified") in err_str:
+            if str(job_id) not in err_str:
                 if self.check_finish_tag():
                     return JobStatus.finished
                 else:
