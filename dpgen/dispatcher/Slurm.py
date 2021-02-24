@@ -75,6 +75,8 @@ class Slurm(Batch):
         _default_item(res, 'cuda_multi_tasks', False)
         _default_item(res, 'allow_failure', False)
         _default_item(res, 'cvasp', False)
+        _default_item(res, 'cluster', '')
+        _default_item(res, 'pre_command_list', [])
         return res
 
     def sub_script_head(self, res):
@@ -91,6 +93,8 @@ class Slurm(Batch):
             ret += "#SBATCH --account=%s \n" % res['account']
         if len(res['partition']) > 0:
             ret += "#SBATCH --partition=%s \n" % res['partition']
+        if len(res['cluster']) > 0:
+            ret += "#SBATCH --cluster=%s \n" % res['cluster']
         if len(res['qos']) > 0:
             ret += "#SBATCH --qos=%s \n" % res['qos']
         if res['numb_gpu'] > 0:
@@ -107,6 +111,8 @@ class Slurm(Batch):
             temp_exclude = temp_exclude[:-1]
             ret += '#SBATCH --exclude=%s \n' % temp_exclude
         ret += "\n"
+        for ii in res['pre_command_list']:
+            ret += "%s\n" % ii
         for ii in res['module_unload_list']:
             ret += "module unload %s\n" % ii
         for ii in res['module_list']:
@@ -159,7 +165,7 @@ class Slurm(Batch):
 
     def _check_status_inner(self, job_id, retry=0):
         ret, stdin, stdout, stderr\
-            = self.context.block_call ('squeue -o "%.18i %.2t" -j ' + job_id)
+            = self.context.block_call('squeue -o "%.18i %.2t" -j ' + job_id)
         if (ret != 0):
             err_str = stderr.read().decode('utf-8')
             if str("Invalid job id specified") in err_str:
